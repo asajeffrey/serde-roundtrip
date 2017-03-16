@@ -4,9 +4,14 @@ extern crate serde;
 
 use serde::Deserialize;
 use serde::Serialize;
+use serde::bytes::ByteBuf;
+use serde::bytes::Bytes;
 
 use std::borrow::Cow;
 use std::borrow::ToOwned;
+use std::ffi::CStr;
+use std::ffi::CString;
+use std::marker::PhantomData;
 use std::net::IpAddr;
 use std::net::Ipv4Addr;
 use std::net::Ipv6Addr;
@@ -14,6 +19,8 @@ use std::net::SocketAddr;
 use std::net::SocketAddrV4;
 use std::net::SocketAddrV6;
 use std::ops::Deref;
+use std::path::Path;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
@@ -61,27 +68,47 @@ macro_rules! roundtrip_via_clone {
 }
 
 roundtrip_via_clone!(());
-roundtrip_via_clone!(bool);
-roundtrip_via_clone!(isize);
-roundtrip_via_clone!(i8);
-roundtrip_via_clone!(i16);
-roundtrip_via_clone!(i32);
-roundtrip_via_clone!(i64);
-roundtrip_via_clone!(usize);
-roundtrip_via_clone!(u8);
-roundtrip_via_clone!(u16);
-roundtrip_via_clone!(u32);
-roundtrip_via_clone!(u64);
-roundtrip_via_clone!(f32);
-roundtrip_via_clone!(f64);
-roundtrip_via_clone!(char);
+roundtrip_via_clone!(ByteBuf);
+roundtrip_via_clone!(CString);
 roundtrip_via_clone!(Duration);
 roundtrip_via_clone!(IpAddr);
 roundtrip_via_clone!(Ipv4Addr);
 roundtrip_via_clone!(Ipv6Addr);
+roundtrip_via_clone!(PathBuf);
 roundtrip_via_clone!(SocketAddr);
 roundtrip_via_clone!(SocketAddrV4);
 roundtrip_via_clone!(SocketAddrV6);
+roundtrip_via_clone!(String);
+roundtrip_via_clone!(bool);
+roundtrip_via_clone!(char);
+roundtrip_via_clone!(f32);
+roundtrip_via_clone!(f64);
+roundtrip_via_clone!(i16);
+roundtrip_via_clone!(i32);
+roundtrip_via_clone!(i64);
+roundtrip_via_clone!(i8);
+roundtrip_via_clone!(isize);
+roundtrip_via_clone!(u16);
+roundtrip_via_clone!(u32);
+roundtrip_via_clone!(u64);
+roundtrip_via_clone!(u8);
+roundtrip_via_clone!(usize);
+
+// Types which roundtrip using to_owned.
+
+macro_rules! roundtrip_via_to_owned {
+    ($t:ty) => {
+        impl<T> RoundTrip<T> for $t
+            where T: SameDeserialization<SameAs=<$t as ToOwned>::Owned>
+        {
+            fn round_trip(&self) -> T { T::from(self.to_owned()) }
+        }
+    };
+}
+
+roundtrip_via_to_owned!(CStr);
+roundtrip_via_to_owned!(Path);
+roundtrip_via_to_owned!(str);
 
 // Type constructors which roundtrip by dereferencing to their type argument
 
@@ -155,34 +182,17 @@ impl<S,T,Ts> RoundTrip<Ts> for [S] where
     }
 }
 
+impl<'a,T> RoundTrip<T> for Bytes<'a>
+    where T: SameDeserialization<SameAs=ByteBuf>
+{
+    fn round_trip(&self) -> T { T::from(ByteBuf::from(self.to_vec())) }
+}
+
 impl<T> SameDeserialization for Vec<T> where
     T: Deserialize,
 {
     type SameAs = Vec<T>;
     fn from(data: Vec<T>) -> Vec<T> { data }
-}
-
-// Strings
-
-impl<T> RoundTrip<T> for String where
-    T: SameDeserialization<SameAs=String>
-{
-    fn round_trip(&self) -> T {
-        T::from(self.to_owned())
-    }
-}
-
-impl<T> RoundTrip<T> for str where
-    T: SameDeserialization<SameAs=String>
-{
-    fn round_trip(&self) -> T {
-        T::from(self.to_owned())
-    }
-}
-
-impl SameDeserialization for String {
-    type SameAs = String;
-    fn from(data: String) -> String { data }
 }
 
 // Refs
@@ -308,3 +318,52 @@ tuple_impls!(x_0: S0 => T0, x_1: S1 => T1, x_2: S2 => T2, x_3: S3 => T3,
              x_8: S8 => T8, x_9: S9 => T9, x_a: SA => TA, x_b: SB => TB,
              x_c: SC => TC, x_d: SD => TD, x_e: SE => TE, x_f: SF => TF);
 
+// Phantom data
+
+impl<S,T> RoundTrip<T> for PhantomData<S> where
+    T: SameDeserialization<SameAs=PhantomData<S>>,
+{
+    fn round_trip(&self) -> T { T::from(PhantomData) }
+}
+
+impl<T> SameDeserialization for PhantomData<T> {
+    type SameAs = PhantomData<T>;
+    fn from(data: PhantomData<T>) -> PhantomData<T> { data }
+}
+
+// Options
+
+impl<S0,T0,T> RoundTrip<T> for Option<S0> where
+    S0: RoundTrip<T0>,
+    T0: Deserialize,
+    T: SameDeserialization<SameAs=Option<T0>>,
+{
+    fn round_trip(&self) -> T { T::from(self.as_ref().map(RoundTrip::round_trip)) }
+}
+
+impl<T> SameDeserialization for Option<T> where
+    T: Deserialize
+{
+    type SameAs = Option<T>;
+    fn from(data: Option<T>) -> Option<T> { data }
+}
+
+// Results
+
+impl<S0,S1,T0,T1,T> RoundTrip<T> for Result<S0,S1> where
+    S0: RoundTrip<T0>,
+    S1: RoundTrip<T1>,
+    T0: Deserialize,
+    T1: Deserialize,
+    T: SameDeserialization<SameAs=Result<T0,T1>>,
+{
+    fn round_trip(&self) -> T { T::from(self.as_ref().map(RoundTrip::round_trip).map_err(RoundTrip::round_trip)) }
+}
+
+impl<T0,T1> SameDeserialization for Result<T0,T1> where
+    T0: Deserialize,
+    T1: Deserialize,
+{
+    type SameAs = Result<T0,T1>;
+    fn from(data: Result<T0,T1>) -> Result<T0,T1> { data }
+}
