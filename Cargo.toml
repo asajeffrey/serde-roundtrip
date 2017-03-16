@@ -1,0 +1,12 @@
+[package]
+name = "serde_roundtrip"
+version = "0.0.1"
+authors = ["ajeffrey@mozilla.com"]
+
+[lib]
+
+[dependencies]
+serde = "0.9"
+
+[dev-dependencies]
+serde_json = "0.9"
