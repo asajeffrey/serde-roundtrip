@@ -9,8 +9,17 @@ use serde::bytes::Bytes;
 
 use std::borrow::Cow;
 use std::borrow::ToOwned;
+use std::collections::BinaryHeap;
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::LinkedList;
+use std::collections::VecDeque;
 use std::ffi::CStr;
 use std::ffi::CString;
+use std::hash::BuildHasher;
+use std::hash::Hash;
 use std::marker::PhantomData;
 use std::net::IpAddr;
 use std::net::Ipv4Addr;
@@ -366,4 +375,137 @@ impl<T0,T1> SameDeserialization for Result<T0,T1> where
 {
     type SameAs = Result<T0,T1>;
     fn from(data: Result<T0,T1>) -> Result<T0,T1> { data }
+}
+
+// BinaryHeap
+
+impl<S0,T0,T> RoundTrip<T> for BinaryHeap<S0> where
+    S0: Ord+RoundTrip<T0>,
+    T0: Ord+Deserialize,
+    T: SameDeserialization<SameAs=BinaryHeap<T0>>,
+{
+    fn round_trip(&self) -> T { T::from(self.iter().map(RoundTrip::round_trip).collect()) }
+}
+
+impl<T0> SameDeserialization for BinaryHeap<T0> where
+    T0: Ord+Deserialize,
+{
+    type SameAs = BinaryHeap<T0>;
+    fn from(data: BinaryHeap<T0>) -> BinaryHeap<T0> { data }
+}
+
+// BTreeMap
+
+impl<S0,S1,T0,T1,T> RoundTrip<T> for BTreeMap<S0,S1> where
+    S0: Ord+RoundTrip<T0>,
+    S1: RoundTrip<T1>,
+    T0: Ord+Deserialize,
+    T1: Deserialize,
+    T: SameDeserialization<SameAs=BTreeMap<T0,T1>>,
+{
+    fn round_trip(&self) -> T {
+        T::from(self.iter().map(|(x1,x2)| (x1.round_trip(), x2.round_trip())).collect())
+    }
+}
+
+impl<T0,T1> SameDeserialization for BTreeMap<T0,T1> where
+    T0: Ord+Deserialize,
+    T1: Deserialize,
+{
+    type SameAs = BTreeMap<T0,T1>;
+    fn from(data: BTreeMap<T0,T1>) -> BTreeMap<T0,T1> { data }
+}
+
+// BTreeSet
+
+impl<S0,T0,T> RoundTrip<T> for BTreeSet<S0> where
+    S0: Ord+RoundTrip<T0>,
+    T0: Ord+Deserialize,
+    T: SameDeserialization<SameAs=BTreeSet<T0>>,
+{
+    fn round_trip(&self) -> T { T::from(self.iter().map(RoundTrip::round_trip).collect()) }
+}
+
+impl<T0> SameDeserialization for BTreeSet<T0> where
+    T0: Ord+Deserialize,
+{
+    type SameAs = BTreeSet<T0>;
+    fn from(data: BTreeSet<T0>) -> BTreeSet<T0> { data }
+}
+
+// HashMap
+
+impl<S0,S1,T0,T1,H,T> RoundTrip<T> for HashMap<S0,S1,H> where
+    S0: Eq+Hash+RoundTrip<T0>,
+    S1: RoundTrip<T1>,
+    T0: Eq+Hash+Deserialize,
+    T1: Deserialize,
+    H: BuildHasher+Default,
+    T: SameDeserialization<SameAs=HashMap<T0,T1,H>>,
+{
+    fn round_trip(&self) -> T {
+        T::from(self.iter().map(|(x1,x2)| (x1.round_trip(), x2.round_trip())).collect())
+    }
+}
+
+impl<T0,T1,H> SameDeserialization for HashMap<T0,T1,H> where
+    T0: Eq+Hash+Deserialize,
+    T1: Deserialize,
+    H: BuildHasher+Default,
+{
+    type SameAs = HashMap<T0,T1,H>;
+    fn from(data: HashMap<T0,T1,H>) -> HashMap<T0,T1,H> { data }
+}
+
+// HashSet
+
+impl<S0,T0,H,T> RoundTrip<T> for HashSet<S0,H> where
+    S0: Eq+Hash+RoundTrip<T0>,
+    T0: Eq+Hash+Deserialize,
+    H: BuildHasher+Default,
+    T: SameDeserialization<SameAs=HashSet<T0,H>>,
+{
+    fn round_trip(&self) -> T { T::from(self.iter().map(RoundTrip::round_trip).collect()) }
+}
+
+impl<T0,H> SameDeserialization for HashSet<T0,H> where
+    T0: Eq+Hash+Deserialize,
+    H: BuildHasher+Default,
+{
+    type SameAs = HashSet<T0,H>;
+    fn from(data: HashSet<T0,H>) -> HashSet<T0,H> { data }
+}
+
+// LinkedList
+
+impl<S0,T0,T> RoundTrip<T> for LinkedList<S0> where
+    S0: RoundTrip<T0>,
+    T0: Deserialize,
+    T: SameDeserialization<SameAs=LinkedList<T0>>,
+{
+    fn round_trip(&self) -> T { T::from(self.iter().map(RoundTrip::round_trip).collect()) }
+}
+
+impl<T0> SameDeserialization for LinkedList<T0> where
+    T0: Deserialize,
+{
+    type SameAs = LinkedList<T0>;
+    fn from(data: LinkedList<T0>) -> LinkedList<T0> { data }
+}
+
+// VecDeque
+
+impl<S0,T0,T> RoundTrip<T> for VecDeque<S0> where
+    S0: RoundTrip<T0>,
+    T0: Deserialize,
+    T: SameDeserialization<SameAs=VecDeque<T0>>,
+{
+    fn round_trip(&self) -> T { T::from(self.iter().map(RoundTrip::round_trip).collect()) }
+}
+
+impl<T0> SameDeserialization for VecDeque<T0> where
+    T0: Deserialize,
+{
+    type SameAs = VecDeque<T0>;
+    fn from(data: VecDeque<T0>) -> VecDeque<T0> { data }
 }
