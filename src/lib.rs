@@ -122,7 +122,7 @@ roundtrip_via_to_owned!(str);
 // Type constructors which roundtrip by dereferencing to their type argument
 
 macro_rules! roundtrip_via_deref {
-    ($F: ident, $f: path) => {
+    ($F: ident) => {
         impl<S,T> RoundTrip<T> for $F<S> where
             S: RoundTrip<T>,
             T: Deserialize,
@@ -130,17 +130,17 @@ macro_rules! roundtrip_via_deref {
             fn round_trip(&self) -> T { T::from(self.deref().round_trip()) }
         }
         impl<T> SameDeserialization for $F<T> where
-            T: Deserialize,
+            T: SameDeserialization,
         {
-            type SameAs = T;
-            fn from(data: T) -> $F<T> { $f(data) }
+            type SameAs = T::SameAs;
+            fn from(data: T::SameAs) -> $F<T> { $F::new(T::from(data)) }
         }
     }
 }
 
-roundtrip_via_deref!(Arc, Arc::new);
-roundtrip_via_deref!(Box, Box::new);
-roundtrip_via_deref!(Rc, Rc::new);
+roundtrip_via_deref!(Arc);
+roundtrip_via_deref!(Box);
+roundtrip_via_deref!(Rc);
 
 // Fixed-size arrays
 
