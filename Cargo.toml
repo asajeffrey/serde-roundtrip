@@ -9,4 +9,6 @@ authors = ["ajeffrey@mozilla.com"]
 serde = "0.9"
 
 [dev-dependencies]
+serde_derive = "0.9"
 serde_json = "0.9"
+serde_roundtrip_derive = {path = "./serde-roundtrip-derive"}
