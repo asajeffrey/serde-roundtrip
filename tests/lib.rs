@@ -9,6 +9,7 @@ use serde_roundtrip::RoundTrip;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::iter::FromIterator;
 use std::net::IpAddr;
 use std::rc::Rc;
@@ -44,11 +45,14 @@ fn test_round_trip() {
 
 #[test]
 fn test_round_trip_derive() {
+    trait Silly<T> {}
+    impl<T,U> Silly<T> for U {}
+
     #[derive(Serialize, Deserialize, RoundTrip, PartialEq, Debug)]
     struct TestTuple<'a,T>(Cow<'a,str>, T);
 
     #[derive(Serialize, Deserialize, RoundTrip, PartialEq, Debug)]
-    struct TestStruct<T> { contents: Vec<T> }
+    struct TestStruct<A: Debug> where Vec<Box<A>>: Silly<(usize,A)> { contents: Vec<A> }
 
     #[derive(Serialize, Deserialize, RoundTrip, PartialEq, Debug)]
     struct TestUnit;

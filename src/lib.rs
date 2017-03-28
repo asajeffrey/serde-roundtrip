@@ -509,3 +509,4 @@ impl<T0> SameDeserialization for VecDeque<T0> where
     type SameAs = VecDeque<T0>;
     fn from(data: VecDeque<T0>) -> VecDeque<T0> { data }
 }
+
