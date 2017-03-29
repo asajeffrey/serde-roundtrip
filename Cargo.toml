@@ -15,4 +15,4 @@ serde = "0.9"
 [dev-dependencies]
 serde_derive = "0.9"
 serde_json = "0.9"
-serde_roundtrip_derive = "0.1.0"
+serde_roundtrip_derive = {version = "0.1", path ="./serde-roundtrip-derive"}
