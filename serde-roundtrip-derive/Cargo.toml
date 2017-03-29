@@ -1,6 +1,6 @@
 [package]
 name = "serde_roundtrip_derive"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["ajeffrey@mozilla.com"]
 repository = "https://github.com/asajeffrey/serde_roundtrip"
 description = "Deriving a trait for when serde supports serializing at one type and deserializing as another."
