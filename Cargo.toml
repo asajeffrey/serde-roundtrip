@@ -2,6 +2,10 @@
 name = "serde_roundtrip"
 version = "0.1.0"
 authors = ["ajeffrey@mozilla.com"]
+repository = "https://github.com/asajeffrey/serde_roundtrip"
+description = "A trait for when serde supports serializing at one type and deserializing as another."
+keywords = ["serde","serialization"]
+license = "MPL-2.0"
 
 [lib]
 
@@ -11,4 +15,4 @@ serde = "0.9"
 [dev-dependencies]
 serde_derive = "0.9"
 serde_json = "0.9"
-serde_roundtrip_derive = {path = "./serde-roundtrip-derive"}
+serde_roundtrip_derive = "0.1.0"
