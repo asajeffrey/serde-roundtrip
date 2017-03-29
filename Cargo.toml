@@ -1,6 +1,6 @@
 [package]
 name = "serde_roundtrip"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["ajeffrey@mozilla.com"]
 
 [lib]
